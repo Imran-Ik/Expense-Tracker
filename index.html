@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Daily Expense Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="theme-color" content="#1a73e8">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, Roboto, Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 16px;
+      color: #202124;
+    }
+    h1 { font-size: 18px; margin: 0 0 4px; display: inline-block; }
+    .top-row { display: flex; justify-content: space-between; align-items: center; }
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+    }
+    .status-bar {
+      font-size: 13px;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #e8f0fe;
+      color: #1a73e8;
+      cursor: pointer;
+    }
+    .status-bar.offline { background: #fce8e6; color: #c5221f; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      background: #fff;
+      color: #5f6368;
+      border: 1px solid #dadce0;
+    }
+    .tab-btn.active {
+      background: #1a73e8;
+      color: #fff;
+      border-color: #1a73e8;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #5f6368;
+      margin: 12px 0 4px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      background: #fff;
+    }
+    input[readonly] { background: #f1f3f4; color: #5f6368; }
+    .row2 { display: flex; gap: 10px; }
+    .row2 > div { flex: 1; }
+    button.primary {
+      width: 100%;
+      margin-top: 18px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      background: #1a73e8;
+      border: none;
+      border-radius: 8px;
+    }
+    button.primary:active { background: #1558b3; }
+    button.secondary {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a73e8;
+      background: #fff;
+      border: 1px solid #1a73e8;
+      border-radius: 8px;
+    }
+    button.danger {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #c5221f;
+      background: #fff;
+      border: 1px solid #c5221f;
+      border-radius: 8px;
+    }
+    .pending {
+      font-size: 13px;
+      color: #5f6368;
+      margin-top: 10px;
+      text-align: center;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 16px;
+      right: 16px;
+      background: #202124;
+      color: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity .3s;
+      pointer-events: none;
+      z-index: 500;
+    }
+    .toast.show { opacity: 1; }
+
+    /* ---- Summary tab ---- */
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #5f6368;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      margin: 4px 0 10px;
+    }
+    .fund-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .fund-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+    .fund-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #5f6368;
+      text-transform: uppercase;
+    }
+    .fund-balance {
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .fund-change {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .fund-change.up { color: #188038; }
+    .fund-change.down { color: #c5221f; }
+    .fund-change.flat { color: #5f6368; }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: #f1f3f4;
+      border-radius: 8px;
+    }
+    .budget-row { margin-bottom: 14px; }
+    .budget-row .labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .budget-row .cat-name { font-weight: 600; }
+    .budget-row .amounts { color: #5f6368; }
+    .bar-track {
+      height: 8px;
+      border-radius: 4px;
+      background: #e8eaed;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+    .bar-fill.ok { background: #34a853; }
+    .bar-fill.warn { background: #fbbc04; }
+    .bar-fill.over { background: #ea4335; }
+    .empty-note {
+      font-size: 13px;
+      color: #5f6368;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    /* ---- Recent entries / search results ---- */
+    .recent-row {
+      padding: 10px 0;
+      border-bottom: 1px solid #f1f3f4;
+    }
+    .recent-row:last-child { border-bottom: none; }
+    .recent-main {
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .recent-sub {
+      font-size: 12px;
+      color: #5f6368;
+      margin-top: 2px;
+    }
+    .recent-remarks {
+      font-size: 12px;
+      color: #5f6368;
+      font-style: italic;
+      margin-top: 2px;
+    }
+    .pending-tag {
+      display: inline-block;
+      background: #fef7e0;
+      color: #b06000;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+      text-transform: uppercase;
+    }
+
+    /* ---- Modal (Settings) ---- */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 600;
+    }
+    .modal-box {
+      background: #fff;
+      border-radius: 16px 16px 0 0;
+      padding: 20px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .modal-box h2 { font-size: 17px; margin: 0 0 14px; }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #202124;
+      margin: 14px 0;
+    }
+    .switch-row input[type="checkbox"] { width: 18px; height: 18px; }
+
+    /* ---- Lock screen ---- */
+    .lock-overlay {
+      position: fixed;
+      inset: 0;
+      background: #f4f6f8;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+    }
+    .lock-box { text-align: center; max-width: 320px; width: 100%; }
+    .lock-box img { border-radius: 20px; margin-bottom: 12px; }
+    .lock-box h2 { margin: 0 0 18px; font-size: 18px; }
+    .lock-pin-input {
+      text-align: center;
+      letter-spacing: 8px;
+      font-size: 22px;
+    }
+    .lock-error {
+      color: #c5221f;
+      font-size: 13px;
+      min-height: 18px;
+      margin-top: 8px;
+    }
+    .reset-link {
+      display: block;
+      margin-top: 18px;
+      font-size: 13px;
+      color: #5f6368;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-row">
+    <h1>Daily Expense Tracker</h1>
+    <button class="icon-btn" id="settingsBtn" onclick="openSettings()" title="Settings">⚙️</button>
+  </div>
+  <div id="statusBar" class="status-bar">Checking connection…</div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabAddBtn" onclick="switchTab('add')">Add</button>
+    <button class="tab-btn" id="tabSearchBtn" onclick="switchTab('search')">Search</button>
+    <button class="tab-btn" id="tabSummaryBtn" onclick="switchTab('summary')">Summary</button>
+  </div>
+
+  <!-- ADD TRANSACTION VIEW -->
+  <div id="viewAdd" class="view active">
+    <div class="card">
+      <div class="row2">
+        <div>
+          <label>Date</label>
+          <input id="date" readonly>
+        </div>
+        <div>
+          <label>Time</label>
+          <input id="time" readonly>
+        </div>
+      </div>
+
+      <label>Amount</label>
+      <input id="amount" type="number" inputmode="decimal" placeholder="0.00" step="0.01">
+
+      <label>Txn Type</label>
+      <select id="txnType"><option value="">Select…</option></select>
+
+      <div class="row2">
+        <div>
+          <label>Txn From</label>
+          <select id="txnFrom"><option value="">Select…</option></select>
+        </div>
+        <div>
+          <label>Txn To</label>
+          <select id="txnTo"><option value="">Select…</option></select>
+        </div>
+      </div>
+
+      <label>Category</label>
+      <select id="category"><option value="">Select…</option></select>
+
+      <label>Remarks</label>
+      <input id="remarks" type="text" placeholder="Optional note">
+
+      <button class="primary" id="submitBtn" onclick="submitTxn()">Add Transaction</button>
+      <div class="pending" id="pendingCount"></div>
+    </div>
+
+    <div class="card">
+      <div class="top-row">
+        <div class="section-title" style="margin:0;">Recent Entries</div>
+        <button class="icon-btn" style="font-size:14px;" onclick="undoLastEntry()" title="Undo last entry">↩️ Undo</button>
+      </div>
+      <div id="recentList"><div class="empty-note">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- SEARCH VIEW -->
+  <div id="viewSearch" class="view">
+    <div class="card">
+      <div class="row2">
+        <div><label>From</label><input id="sDateFrom" type="date"></div>
+        <div><label>To</label><input id="sDateTo" type="date"></div>
+      </div>
+      <label>Txn Type</label>
+      <select id="sTxnType"><option value="">Any</option></select>
+      <label>Category</label>
+      <select id="sCategory"><option value="">Any</option></select>
+      <label>Account (From or To)</label>
+      <select id="sAccount"><option value="">Any</option></select>
+      <div class="row2">
+        <div><label>Min Amount</label><input id="sMinAmount" type="number" placeholder="0"></div>
+        <div><label>Max Amount</label><input id="sMaxAmount" type="number" placeholder="Any"></div>
+      </div>
+      <label>Remarks contains</label>
+      <input id="sKeyword" type="text" placeholder="Optional keyword">
+      <button class="primary" onclick="runSearch()">Search</button>
+    </div>
+    <div class="card" id="searchSummary" style="display:none;"></div>
+    <div class="card" id="searchResults"></div>
+  </div>
+
+  <!-- SUMMARY VIEW -->
+  <div id="viewSummary" class="view">
+    <div class="section-title" id="fundsPeriodLabel">Account Balances</div>
+    <div class="fund-grid" id="fundsGrid">
+      <div class="empty-note">Loading…</div>
+    </div>
+
+    <div class="section-title" id="budgetMonthLabel">Budget vs Actual</div>
+    <div class="card" id="budgetCard">
+      <div class="empty-note">Loading…</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-box">
+      <h2>Settings</h2>
+
+      <label class="switch-row">
+        <input type="checkbox" id="lockEnabledToggle" onchange="onLockToggle()">
+        App Lock (PIN)
+      </label>
+      <div id="pinSetupBlock" style="display:none;">
+        <label>New PIN (4–8 digits)</label>
+        <input id="newPin" type="password" inputmode="numeric" maxlength="8">
+        <label>Confirm PIN</label>
+        <input id="confirmPin" type="password" inputmode="numeric" maxlength="8">
+        <button class="secondary" onclick="savePin()">Save PIN</button>
+      </div>
+
+      <label class="switch-row">
+        <input type="checkbox" id="biometricToggle" onchange="onBiometricToggle()">
+        Also allow fingerprint / face unlock
+      </label>
+
+      <div class="empty-note" style="text-align:left; padding:10px 0;">
+        This lock only protects the screen on this device — it does not add security to your Google Sheet, which stays protected by your Google account and the app's API key.
+      </div>
+
+      <button class="secondary" onclick="closeSettings()">Close</button>
+    </div>
+  </div>
+
+  <!-- LOCK SCREEN -->
+  <div id="lockOverlay" class="lock-overlay">
+    <div class="lock-box">
+      <img src="icon-192.png" width="64" height="64" alt="">
+      <h2>Enter PIN to unlock</h2>
+      <input id="lockPinInput" type="password" inputmode="numeric" maxlength="8" placeholder="••••" class="lock-pin-input" autocomplete="off">
+      <button class="primary" onclick="tryUnlockPin()">Unlock</button>
+      <button class="secondary" id="biometricBtn" style="display:none;" onclick="tryUnlockBiometric()">Use biometric unlock</button>
+      <div class="lock-error" id="lockError"></div>
+      <a href="#" class="reset-link" onclick="resetLockPrompt(); return false;">Forgot PIN? Reset lock on this device</a>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
