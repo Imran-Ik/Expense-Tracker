@@ -61,7 +61,7 @@ function generateClientId() {
 const REQUIRED_BACKEND_VERSION = 9;
 // Bump this alongside meaningful app.js changes. Shown in Settings so you can
 // confirm which build is actually running on a device without DevTools.
-const FRONTEND_VERSION = 16;
+const FRONTEND_VERSION = 17;
 function checkBackendResponse(res, shapeCheckFn) {
   if (!res || typeof res.version === 'undefined') {
     throw new Error('Backend is out of date. In Apps Script: Deploy → Manage deployments → Edit → New version → Deploy.');
@@ -356,6 +356,14 @@ function renderFunds(funds) {
       const cls = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
       const sign = diff > 0 ? '+' : '';
       changeHtml = '<div class="fund-change ' + cls + '">' + sign + formatMoney(diff) + ' this period</div>';
+    } else if (typeof a.outflow === 'number') {
+      // Investment-style rows show an icon instead of a numeric Open Balance, so there's
+      // no close-minus-open to compute. Fall back to the Outflow Dur.Per (column D) value,
+      // which on these rows is the amount added this period, not an actual outflow.
+      const v = a.outflow;
+      const cls = v > 0 ? 'up' : (v < 0 ? 'down' : 'flat');
+      const sign = v > 0 ? '+' : '';
+      changeHtml = '<div class="fund-change ' + cls + '">' + sign + formatMoney(v) + ' this period</div>';
     }
     return '' +
       '<div class="fund-card">' +
