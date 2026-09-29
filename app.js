@@ -524,16 +524,13 @@ function fmtSignedMoney(v) {
   return (v < 0 ? '-' : '+') + '₹' + Math.abs(v).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
 
-// TOTAL-cell colouring: negative = red; positive = green, scaled by size relative to the
-// largest positive balance shown (pale green for small balances, deep green for the biggest).
-function recvTotalStyle(value, maxPos) {
-  if (typeof value !== 'number') return '';
-  if (value < 0) return 'background:#d93025;color:#fff;';
-  const t = maxPos > 0 ? Math.min(1, value / maxPos) : 1;
-  const light = 92 - 50 * t;          // 92% (very light) -> 42% (deep green)
-  const sat = 42 + 28 * t;
-  const text = light < 62 ? '#fff' : '#0d5c2a';
-  return 'background:hsl(135,' + sat.toFixed(0) + '%,' + light.toFixed(0) + '%);color:' + text + ';';
+// TOTAL-cell colouring: same flat "glowing" gradients as the Summary tab's scorecards --
+// green for a positive (receivable) balance, red for negative. No magnitude scaling; this
+// is meant to read at a glance the same way the scorecards do, not as a heatmap.
+function recvTotalStyle(value) {
+  if (typeof value !== 'number' || value === 0) return '';
+  if (value < 0) return 'background:linear-gradient(135deg,#c5221f,#ea4335);color:#fff;box-shadow:0 2px 6px rgba(197,34,31,0.45);';
+  return 'background:linear-gradient(135deg,#188038,#34a853);color:#fff;box-shadow:0 2px 6px rgba(24,128,56,0.45);';
 }
 
 function renderRecvTable(table) {
@@ -550,22 +547,17 @@ function renderRecvTable(table) {
   const cols = (table.columns && table.columns.length === 4) ? table.columns : ['O/B', 'Given', 'Received', 'TOTAL'];
   const totalIdx = 3;
 
-  // Rows whose TOTAL is zero (fully settled) are left out.
+  // Rows whose TOTAL is zero (fully settled) are left out -- silently, no note; the
+  // totals row above still accounts for them since it comes straight from the sheet.
   const visible = table.rows.filter(function (r) {
     const t = r.values[totalIdx];
     return !(t === null || (typeof t === 'number' && Math.abs(t) < 0.005));
   });
-  const hidden = table.rows.length - visible.length;
 
   if (visible.length === 0) {
     card.innerHTML = '<div class="empty-note">All debtor balances are settled.</div>';
     return;
   }
-
-  const maxPos = visible.reduce(function (m, r) {
-    const t = r.values[totalIdx];
-    return (typeof t === 'number' && t > m) ? t : m;
-  }, 0);
 
   let html = '<div class="table-wrap"><table class="recv-table"><thead><tr><th>Debtors</th>' +
     cols.map(function (c) { return '<th>' + escapeHtml(c) + '</th>'; }).join('') +
@@ -575,7 +567,7 @@ function renderRecvTable(table) {
     html += '<tr><td class="name">' + escapeHtml(r.name) + '</td>';
     r.values.forEach(function (v, i) {
       if (i === totalIdx) {
-        html += '<td class="total-cell" style="' + recvTotalStyle(v, maxPos) + '">' + fmtNum(v) + '</td>';
+        html += '<td class="total-cell" style="' + recvTotalStyle(v) + '">' + fmtNum(v) + '</td>';
       } else {
         html += '<td>' + fmtNum(v) + '</td>';
       }
@@ -589,10 +581,6 @@ function renderRecvTable(table) {
   }
   html += '</tbody></table></div>';
 
-  if (hidden > 0) {
-    html += '<div class="recv-sub">' + hidden + ' debtor' + (hidden === 1 ? '' : 's') +
-      ' with a zero balance ' + (hidden === 1 ? 'is' : 'are') + ' hidden. The totals row still includes them.</div>';
-  }
   card.innerHTML = html;
 }
 
@@ -605,6 +593,20 @@ function populateRecvFilters(data) {
   fill('rMonth', data.months, 'All months');
   if ((data.debtors || []).indexOf(prevD) !== -1) dSel.value = prevD;
   if ((data.months || []).indexOf(prevM) !== -1) mSel.value = prevM;
+}
+
+// Opening Balance (O/B, the table's first value column) for the current debtor filter --
+// a single debtor's O/B if one is selected, or the sum across every debtor for "All debtors".
+// Reads from the full table (including zero-balance rows hidden from display), since a
+// debtor's opening balance still contributes to the grand total even if it nets to zero.
+function getOpeningBalanceSum_(debtorFilterLower) {
+  const rows = (receivablesData && receivablesData.table && receivablesData.table.rows) || [];
+  const obOf = function (r) { return typeof r.values[0] === 'number' ? r.values[0] : 0; };
+  if (debtorFilterLower) {
+    const match = rows.find(function (r) { return r.name.trim().toLowerCase() === debtorFilterLower; });
+    return match ? obOf(match) : 0;
+  }
+  return rows.reduce(function (sum, r) { return sum + obOf(r); }, 0);
 }
 
 function renderDebtorTxns() {
@@ -624,13 +626,19 @@ function renderDebtorTxns() {
     if (typeof t.net !== 'number') return;
     if (t.net < 0) given += t.net; else received += t.net;
   });
-  const net = given + received;
+
+  // Opening Balance is a starting figure, not a transaction, so it isn't affected by the
+  // Month filter -- but it IS what makes "Net" here match the debtor's own TOTAL column
+  // in the table above when no month filter narrows things down. With "All debtors", every
+  // debtor's opening balance is included, so the grand Net matches the sheet's totals row.
+  const opening = getOpeningBalanceSum_(d);
+  const net = opening + given + received;
 
   if (sumEl) {
     sumEl.innerHTML =
       '<div class="total-row" style="margin-bottom:0;"><span>' + items.length + ' transaction' + (items.length === 1 ? '' : 's') + '</span>' +
-      '<span class="' + (net < 0 ? 'amt-neg' : (net > 0 ? 'amt-pos' : '')) + '">Net ' + fmtSignedMoney(net) + '</span></div>' +
-      '<div class="recv-sub">Given ' + fmtSignedMoney(given) + ' · Received ' + fmtSignedMoney(received) + '</div>';
+      '<span class="' + (net < 0 ? 'amt-neg' : (net > 0 ? 'amt-pos' : '')) + '">Net Receivable ' + fmtSignedMoney(net) + '</span></div>' +
+      '<div class="recv-sub">Opening ' + fmtSignedMoney(opening) + ' · Given ' + fmtSignedMoney(given) + ' · Received ' + fmtSignedMoney(received) + '</div>';
   }
 
   if (items.length === 0) {
