@@ -305,34 +305,40 @@
     }
 
     /* ---- Receivables tab ---- */
-    .table-wrap { overflow-x: auto; }
+    .table-wrap { width: 100%; }
     .recv-table {
       width: 100%;
+      table-layout: fixed;
       border-collapse: separate;
       border-spacing: 0;
-      font-size: 12.5px;
+      font-size: 11px;
     }
     .recv-table th {
       background: #7b4dd6;
       color: #fff;
-      padding: 9px 6px;
+      padding: 8px 4px;
       text-align: right;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .03em;
-      white-space: nowrap;
+      letter-spacing: .02em;
+      word-break: break-word;
     }
-    .recv-table th:first-child { text-align: left; border-radius: 8px 0 0 0; padding-left: 10px; }
+    .recv-table th:nth-child(1) { width: 26%; }
+    .recv-table th:nth-child(2),
+    .recv-table th:nth-child(3),
+    .recv-table th:nth-child(4),
+    .recv-table th:nth-child(5) { width: 18.5%; }
+    .recv-table th:first-child { text-align: left; border-radius: 8px 0 0 0; padding-left: 8px; }
     .recv-table th:last-child { border-radius: 0 8px 0 0; }
     .recv-table td {
-      padding: 9px 6px;
+      padding: 8px 4px;
       text-align: right;
       border-bottom: 1px solid #f1f3f4;
-      white-space: nowrap;
+      word-break: break-word;
     }
-    .recv-table td.name { text-align: left; font-weight: 600; padding-left: 10px; }
-    .recv-table td.total-cell { font-weight: 700; }
+    .recv-table td.name { text-align: left; font-weight: 600; padding-left: 8px; word-break: break-word; }
+    .recv-table td.total-cell { font-weight: 700; border-radius: 6px; }
     .recv-table tr.foot td {
       font-weight: 800;
       background: #f1f3f4;
