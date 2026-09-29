@@ -632,7 +632,7 @@ function renderDebtorTxns() {
   // in the table above when no month filter narrows things down. With "All debtors", every
   // debtor's opening balance is included, so the grand Net matches the sheet's totals row.
   const opening = getOpeningBalanceSum_(d);
-  const net = opening + given + received;
+  const net = opening - given - received;
 
   if (sumEl) {
     sumEl.innerHTML =
