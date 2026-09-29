@@ -1,6 +1,6 @@
 // Bump this version string every time you change any file in this folder.
 // It forces old caches to be discarded so updates aren't stuck stale on phones.
-const CACHE_NAME = 'exp-tracker-shell-v16';
+const CACHE_NAME = 'exp-tracker-shell-v17';
 const SHELL_FILES = [
   './',
   './index.html',
